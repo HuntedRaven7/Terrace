@@ -159,24 +159,12 @@ jobs:
         with:
           install-tools: '["just", "cosign", "oras", "skopeo"]'
 
-      - name: Restore DNF cache
-        uses: projectbluefin/actions/bootc-build/dnf-cache@v1
-        with:
-          action: restore
-          cache-name: terrace-${{ matrix.image }}-${{ matrix.arch }}-${{ matrix.variant }}
-
       - name: Build image
         run: |
           just bst build elements/${{ matrix.image }}/${{ matrix.image }}.bst \
-            --option arch ${{ matrix.arch }} \
-            --option gaming ${{ matrix.variant == 'gaming' && 'true' || 'false' }} \
-            --option x86_64_v3 ${{ matrix.arch == 'x86_64_v3' && 'true' || 'false' }}
-
-      - name: Save DNF cache
-        uses: projectbluefin/actions/bootc-build/dnf-cache@v1
-        with:
-          action: save
-          cache-name: terrace-${{ matrix.image }}-${{ matrix.arch }}-${{ matrix.variant }}
+            -o arch ${{ matrix.arch }} \
+            -o gaming ${{ matrix.variant == 'gaming' && 'true' || 'false' }} \
+            -o x86_64_v3 ${{ matrix.arch == 'x86_64_v3' && 'true' || 'false' }}
 
       - name: Generate tags
         id: tags
