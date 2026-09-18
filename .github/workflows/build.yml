@@ -120,7 +120,7 @@ jobs:
             ARCHS="x86_64 x86_64_v3"
           fi
 
-          # Build matrix JSON
+          # Build matrix JSON using jq to ensure proper escaping
           MATRIX='{"include":[]}'
           for image in $IMAGES; do
             for variant in $VARIANTS; do
@@ -134,8 +134,10 @@ jobs:
             done
           done
 
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-          echo "Generated matrix: $MATRIX"
+          # Escape for GITHUB_OUTPUT
+          echo "matrix<<EOF" >> $GITHUB_OUTPUT
+          echo "$MATRIX" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
   build:
     name: Build ${{ matrix.image }}-${{ matrix.variant }}-${{ matrix.arch }}
