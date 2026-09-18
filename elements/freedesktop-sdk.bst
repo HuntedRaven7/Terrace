@@ -11,16 +11,14 @@ sources:
     options:
       target_arch: '%{arch}'
     (?):
-    - x86_64_v3:
-      x86_64_v3: true
     - arch == 'x86_64':
-      bootstrap_build_arch: 'x86_64'
+        bootstrap_build_arch: 'x86_64'
     - arch == 'aarch64':
-      bootstrap_build_arch: 'aarch64'
+        bootstrap_build_arch: 'aarch64'
     - arch == "ppc64le":
-      bootstrap_build_arch: "ppc64le"
+        bootstrap_build_arch: "ppc64le"
     - arch == "riscv64":
-      bootstrap_build_arch: "x86_64"
+        bootstrap_build_arch: "x86_64"
 
 overrides:
   components/at-spi2-core.bst: gnome-build-meta.bst:sdk/at-spi2-core.bst
