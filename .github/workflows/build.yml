@@ -19,12 +19,11 @@ on:
         default: 'default'
         type: choice
         options: [default, gaming]
-      arch:
-        description: 'Architecture to build'
+      x86_64_v3:
+        description: 'Enable x86_64-v3 optimizations'
         required: false
-        default: 'x86_64'
-        type: choice
-        options: [x86_64, x86_64_v3]
+        default: 'true'
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -112,12 +111,15 @@ jobs:
             fi
           fi
 
-          # Determine archs
-          ARCHS=""
+          # Determine archs - always x86_64, x86_64_v3 is a boolean option
+          X86_64_V3_VALUES="false true"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ARCHS="${{ github.event.inputs.arch }}"
-          else
-            ARCHS="x86_64 x86_64_v3"
+            # For dispatch, use the input x86_64_v3 boolean
+            if [ "${{ github.event.inputs.x86_64_v3 }}" = "true" ]; then
+              X86_64_V3_VALUES="true"
+            else
+              X86_64_V3_VALUES="false"
+            fi
           fi
 
           # Build matrix JSON using jq to ensure proper escaping
@@ -128,8 +130,8 @@ jobs:
               if [ "$image" = "strata" ] && [ "$variant" = "gaming" ]; then
                 continue
               fi
-              for arch in $ARCHS; do
-                MATRIX=$(echo "$MATRIX" | jq --arg img "$image" --arg var "$variant" --arg arch "$arch" '.include += [{"image": $img, "variant": $var, "arch": $arch}]')
+              for x86_64_v3 in $X86_64_V3_VALUES; do
+                MATRIX=$(echo "$MATRIX" | jq --arg img "$image" --arg var "$variant" --arg v3 "$x86_64_v3" '.include += [{"image": $img, "variant": $var, "x86_64_v3": $v3}]')
               done
             done
           done
@@ -140,7 +142,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
   build:
-    name: Build ${{ matrix.image }}-${{ matrix.variant }}-${{ matrix.arch }}
+    name: Build ${{ matrix.image }}-${{ matrix.variant }}-v3${{ matrix.x86_64_v3 }}
     needs: detect-changes
     if: needs.detect-changes.outputs.matrix != '{"include":[]}'
     runs-on: ubuntu-24.04
@@ -161,9 +163,9 @@ jobs:
 
       - name: Build image
         run: |
-          just bst -o arch ${{ matrix.arch }} \
+          just bst -o arch x86_64 \
             -o gaming ${{ matrix.variant == 'gaming' && 'true' || 'false' }} \
-            -o x86_64_v3 ${{ matrix.arch == 'x86_64_v3' && 'true' || 'false' }} \
+            -o x86_64_v3 ${{ matrix.x86_64_v3 }} \
             build elements/${{ matrix.image }}/${{ matrix.image }}.bst
 
       - name: Generate tags
@@ -222,7 +224,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.image }}-${{ matrix.arch }}-${{ matrix.variant }}
+          name: build-${{ matrix.image }}-v3${{ matrix.x86_64_v3 }}-${{ matrix.variant }}
           path: |
             dist/
           retention-days: 7
