@@ -42,25 +42,105 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect changes
-        id: detect
-        uses: projectbluefin/actions/bootc-build/detect-changes@v1
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
         with:
-          image-variants: .github/image-variants.json
+          filters: |
+            plateau:
+              - 'elements/plateau/**'
+              - 'files/**'
+              - 'include/**'
+              - 'Justfile'
+              - 'project.conf'
+              - 'Containerfile'
+            strata:
+              - 'elements/strata/**'
+              - 'files/**'
+              - 'include/**'
+              - 'Justfile'
+              - 'project.conf'
+              - 'Containerfile'
+            core:
+              - 'elements/core/**'
+              - 'elements/oci/**'
+              - 'elements/plugins/**'
+              - 'plugins/**'
+              - 'include/**'
+              - 'Justfile'
+              - 'project.conf'
+            nvidia:
+              - 'elements/bluefin-nvidia/**'
 
       - name: Set matrix
         id: set-matrix
         run: |
-          MATRIX="${{ steps.detect.outputs.matrix }}"
-          if [ -z "$MATRIX" ] || [ "$MATRIX" = "null" ]; then
-            MATRIX="[]"
+          # Determine which images to build based on workflow dispatch or changed paths
+          IMAGES=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ github.event.inputs.image }}" in
+              all) IMAGES="plateau strata" ;;
+              plateau) IMAGES="plateau" ;;
+              strata) IMAGES="strata" ;;
+            esac
+          else
+            # Auto-detect from changed paths
+            IMAGES=""
+            if [ "${{ steps.filter.outputs.plateau }}" = "true" ] || [ "${{ steps.filter.outputs.core }}" = "true" ]; then
+              IMAGES="$IMAGES plateau"
+            fi
+            if [ "${{ steps.filter.outputs.strata }}" = "true" ] || [ "${{ steps.filter.outputs.core }}" = "true" ]; then
+              IMAGES="$IMAGES strata"
+            fi
+            # If no specific changes, build all on main/testing push
+            if [ -z "$IMAGES" ] && [ "${{ github.event_name }}" = "push" ]; then
+              IMAGES="plateau strata"
+            fi
           fi
+
+          # Determine variants
+          VARIANTS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ github.event.inputs.variant }}" in
+              default) VARIANTS="default" ;;
+              gaming) VARIANTS="gaming" ;;
+            esac
+          else
+            VARIANTS="default"
+            if [ "${{ steps.filter.outputs.nvidia }}" = "true" ]; then
+              VARIANTS="gaming"
+            fi
+          fi
+
+          # Determine archs
+          ARCHS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ARCHS="${{ github.event.inputs.arch }}"
+          else
+            ARCHS="x86_64 x86_64_v3"
+          fi
+
+          # Build matrix JSON
+          MATRIX='{"include":[]}'
+          for image in $IMAGES; do
+            for variant in $VARIANTS; do
+              # Strata doesn't have gaming variant
+              if [ "$image" = "strata" ] && [ "$variant" = "gaming" ]; then
+                continue
+              fi
+              for arch in $ARCHS; do
+                MATRIX=$(echo "$MATRIX" | jq --arg img "$image" --arg var "$variant" --arg arch "$arch" '.include += [{"image": $img, "variant": $var, "arch": $arch}]')
+              done
+            done
+          done
+
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Generated matrix: $MATRIX"
 
   build:
     name: Build ${{ matrix.image }}-${{ matrix.variant }}-${{ matrix.arch }}
     needs: detect-changes
-    if: needs.detect-changes.outputs.matrix != '[]' && needs.detect-changes.outputs.matrix != ''
+    if: needs.detect-changes.outputs.matrix != '{"include":[]}'
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     strategy:
