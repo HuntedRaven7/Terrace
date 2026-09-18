@@ -111,8 +111,7 @@ jobs:
             fi
           fi
 
-          # Determine archs - always x86_64, x86_64_v3 is a boolean option
-          X86_64_V3_VALUES="false true"
+          # Determine archs - Plateau uses x86_64_v3, Strata uses x86_64 only
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # For dispatch, use the input x86_64_v3 boolean
             if [ "${{ github.event.inputs.x86_64_v3 }}" = "true" ]; then
@@ -130,7 +129,17 @@ jobs:
               if [ "$image" = "strata" ] && [ "$variant" = "gaming" ]; then
                 continue
               fi
-              for x86_64_v3 in $X86_64_V3_VALUES; do
+              # Plateau uses x86_64_v3, Strata uses x86_64 only
+              if [ "$image" = "plateau" ]; then
+                X86_64_V3_VALUES_IMAGE="false true"
+              else
+                X86_64_V3_VALUES_IMAGE="false"
+              fi
+              # Override for workflow dispatch
+              if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.x86_64_v3 }}" = "true" ]; then
+                X86_64_V3_VALUES_IMAGE="true"
+              fi
+              for x86_64_v3 in $X86_64_V3_VALUES_IMAGE; do
                 MATRIX=$(echo "$MATRIX" | jq --arg img "$image" --arg var "$variant" --arg v3 "$x86_64_v3" '.include += [{"image": $img, "variant": $var, "x86_64_v3": $v3}]')
               done
             done
