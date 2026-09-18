@@ -166,7 +166,7 @@ jobs:
           just bst -o arch x86_64 \
             -o gaming ${{ matrix.variant == 'gaming' && 'true' || 'false' }} \
             -o x86_64_v3 ${{ matrix.x86_64_v3 }} \
-            build elements/${{ matrix.image }}/${{ matrix.image }}.bst
+            build ${{ matrix.image }}/${{ matrix.image }}.bst
 
       - name: Generate tags
         id: tags
