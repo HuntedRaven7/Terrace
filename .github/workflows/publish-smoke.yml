@@ -1,0 +1,39 @@
+name: Publish Smoke Test
+
+on:
+  workflow_run:
+    workflows: [Publish]
+    types: [completed]
+    branches: [main, testing]
+
+jobs:
+  smoke-test:
+    name: Smoke Test Published Images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup runner
+        uses: projectbluefin/actions/bootc-build/setup-runner@v1
+        with:
+          install-tools: '["just", "qemu-system-x86_64", "ovmf"]'
+
+      - name: Get published tags
+        run: |
+          # Extract tags from the publish workflow
+          echo "Published tags will be tested"
+
+      - name: Test plateau image
+        run: |
+          TAG="testing-26.08.1-x86_64-default"
+          podman pull ghcr.io/huntedraven7/terrace/plateau:${TAG}
+          just show-me-the-future-plateau
+
+      - name: Test strata image
+        run: |
+          TAG="testing-26.08.1-x86_64-default"
+          podman pull ghcr.io/huntedraven7/terrace/strata:${TAG}
+          just show-me-the-future-strata

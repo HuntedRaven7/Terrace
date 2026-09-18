@@ -1,0 +1,143 @@
+name: Execute Release
+
+on:
+  schedule:
+    - cron: '0 6 * * 5'  # Every Friday at 6 AM UTC
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to promote to stable'
+        required: true
+        default: '26.08.1'
+
+jobs:
+  promote:
+    name: Promote to Stable
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup runner
+        uses: projectbluefin/actions/bootc-build/setup-runner@v1
+        with:
+          install-tools: '["just", "cosign", "oras", "skopeo"]'
+
+      - name: Verify testing images exist
+        run: |
+          for image in plateau strata; do
+            for arch in x86_64 x86_64_v3; do
+              for variant in default gaming; do
+                if [ "$image" = "strata" ] && [ "$variant" = "gaming" ]; then
+                  continue
+                fi
+                podman pull ghcr.io/huntedraven7/terrace/${image}:testing-${{ github.event.inputs.version || '26.08.1' }}-${arch}-${variant} || \
+                  { echo "Missing image: ${image}:testing-${{ github.event.inputs.version || '26.08.1' }}-${arch}-${variant}"; exit 1; }
+              done
+            done
+          done
+
+      - name: Run smoke tests
+        run: |
+          just test
+
+      - name: Promote images to stable
+        run: |
+          VERSION="${{ github.event.inputs.version || '26.08.1' }}"
+          for image in plateau strata; do
+            for arch in x86_64 x86_64_v3; do
+              for variant in default gaming; do
+                if [ "$image" = "strata" ] && [ "$variant" = "gaming" ]; then
+                  continue
+                fi
+                TESTING_TAG="testing-${VERSION}-${arch}-${variant}"
+                STABLE_TAG="stable-${VERSION}-${arch}-${variant}"
+                LATEST_TAG="latest-${arch}-${variant}"
+
+                # Re-tag testing to stable
+                skopeo copy --all \
+                  docker://ghcr.io/huntedraven7/terrace/${image}:${TESTING_TAG} \
+                  docker://ghcr.io/huntedraven7/terrace/${image}:${STABLE_TAG}
+
+                # Also tag as latest
+                skopeo copy --all \
+                  docker://ghcr.io/huntedraven7/terrace/${image}:${TESTING_TAG} \
+                  docker://ghcr.io/huntedraven7/terrace/${image}:${LATEST_TAG}
+              done
+            done
+          done
+
+      - name: Sign stable images
+        uses: projectbluefin/actions/bootc-build/sign-and-publish@v1
+        with:
+          image: all
+          tags: stable-${{ github.event.inputs.version || '26.08.1' }}
+          registry: ghcr.io
+          cosign-password: ${{ secrets.COSIGN_PASSWORD }}
+          cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      - name: Chunkah rechunking for stable
+        uses: projectbluefin/actions/bootc-build/chunka@v1
+        with:
+          image: all
+          tags: stable-${{ github.event.inputs.version || '26.08.1' }}
+          registry: ghcr.io
+
+      - name: Scan stable images
+        uses: projectbluefin/actions/bootc-build/scan-image@v1
+        with:
+          image: all
+          tags: stable-${{ github.event.inputs.version || '26.08.1' }}
+          registry: ghcr.io
+          severity: HIGH,CRITICAL
+
+      - name: Update release state
+        run: |
+          VERSION="${{ github.event.inputs.version || '26.08.1' }}"
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          cat > .github/release-state.yaml << EOF
+current:
+  version: "${VERSION}"
+  plateau:
+    testing: "${VERSION}"
+    stable: "${VERSION}"
+  strata:
+    testing: "${VERSION}"
+    stable: "${VERSION}"
+
+history:
+  - version: "${VERSION}"
+    date: "${DATE}"
+    promoted_by: "github-actions"
+
+promotion:
+  schedule: "friday"
+  last_promotion: "${DATE}"
+  next_promotion: "$(date -u -d '+7 days' +%Y-%m-%dT%H:%M:%SZ)"
+EOF
+
+      - name: Commit release state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/release-state.yaml
+          git commit -m "ci: promote ${VERSION} to stable [skip ci]" || true
+          git push || true
+
+      - name: Generate release notes
+        uses: projectbluefin/actions/bootc-build/generate-release-notes@v1
+        with:
+          version: ${{ github.event.inputs.version || '26.08.1' }}
+          tag: stable-${{ github.event.inputs.version || '26.08.1' }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: stable-${{ github.event.inputs.version || '26.08.1' }}
+          name: Terrace ${{ github.event.inputs.version || '26.08.1' }} (Stable)
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false

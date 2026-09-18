@@ -1,0 +1,18 @@
+# Release state tracking for Terrace
+# Updated by CI workflows
+
+current:
+  version: "26.08.1"
+  plateau:
+    testing: "26.08.1"
+    stable: "26.08.1"
+  strata:
+    testing: "26.08.1"
+    stable: "26.08.1"
+
+history: []
+
+promotion:
+  schedule: "friday"
+  last_promotion: null
+  next_promotion: null

@@ -1,0 +1,45 @@
+name: Run Test Suite
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, testing]
+  push:
+    branches: [main, testing]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup runner
+        uses: projectbluefin/actions/bootc-build/setup-runner@v1
+        with:
+          install-tools: '["just", "python3", "pytest", "bats"]'
+
+      - name: Run unit tests
+        run: |
+          just test-unit
+
+      - name: Run integration tests
+        run: |
+          python3 scripts/test_desktop_defaults.py
+          python3 scripts/test_image_variants.py
+
+      - name: Run BST ownership tests
+        run: |
+          python3 scripts/test_ownership_buildstream.py
+          python3 scripts/test_ownership_metadata.py
+          python3 scripts/test_ownership_oci.py
+
+      - name: Run rendering tests
+        run: |
+          python3 scripts/test_render_card.py
+
+      - name: Run compare OCI layers test
+        run: |
+          python3 scripts/compare_oci_layers.py

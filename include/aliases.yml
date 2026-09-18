@@ -1,0 +1,80 @@
+# Aliases for use across elements
+#
+# This file provides common aliases for use in other BST elements.
+# It is included via project.conf (@include)
+
+aliases:
+  # Freedesktop SDK runtime
+  fdsdk-runtime: freedesktop-sdk.bst:runtime
+  fdsdk-sdk: freedesktop-sdk.bst:sdk
+  fdsdk-platform: freedesktop-sdk.bst:platform
+
+  # GNOME build meta
+  gnome-sdk: gnome-build-meta.bst:sdk
+  gnome-platform: gnome-build-meta.bst:platform
+  gnome-runtime: gnome-build-meta.bst:runtime
+
+  # Core dependencies
+  systemd: freedesktop-sdk.bst:systemd
+  systemd-libs: freedesktop-sdk.bst:systemd-libs
+  flatpak: freedesktop-sdk.bst:flatpak
+  xdg-desktop-portal: freedesktop-sdk.bst:xdg-desktop-portal
+  xdg-desktop-portal-gtk: freedesktop-sdk.bst:xdg-desktop-portal-gtk
+
+  # Graphics
+  mesa: freedesktop-sdk.bst:mesa
+  vulkan-loader: freedesktop-sdk.bst:vulkan-loader
+  spirv-tools: freedesktop-sdk.bst:spirv-tools
+
+  # Audio
+  pipewire: freedesktop-sdk.bst:pipewire
+  wireplumber: freedesktop-sdk.bst:wireplumber
+  libpipewire: freedesktop-sdk.bst:libpipewire
+
+  # Wayland
+  wayland: freedesktop-sdk.bst:wayland
+  wayland-protocols: freedesktop-sdk.bst:wayland-protocols
+  wlroots: freedesktop-sdk.bst:wlroots
+
+  # X11
+  xorg-server: freedesktop-sdk.bst:xorg-server
+  xwayland: freedesktop-sdk.bst:xwayland
+
+  # Fonts
+  fontconfig: freedesktop-sdk.bst:fontconfig
+  freetype: freedesktop-sdk.bst:freetype
+  harfbuzz: freedesktop-sdk.bst:harfbuzz
+
+  # Utilities
+  bash: freedesktop-sdk.bst:bash
+  coreutils: freedesktop-sdk.bst:coreutils
+  util-linux: freedesktop-sdk.bst:util-linux
+  findutils: freedesktop-sdk.bst:findutils
+  grep: freedesktop-sdk.bst:grep
+  sed: freedesktop-sdk.bst:sed
+  gawk: freedesktop-sdk.bst:gawk
+
+  # Networking
+  networkmanager: freedesktop-sdk.bst:networkmanager
+  openssh: freedesktop-sdk.bst:openssh
+  openssl: freedesktop-sdk.bst:openssl
+
+  # Build tools
+  meson: freedesktop-sdk.bst:meson
+  ninja: freedesktop-sdk.bst:ninja
+  pkg-config: freedesktop-sdk.bst:pkg-config
+  python3: freedesktop-sdk.bst:python3
+  rust: freedesktop-sdk.bst:rust
+  cargo: freedesktop-sdk.bst:cargo
+
+  # GNOME
+  gnome-shell: gnome-build-meta.bst:gnome-shell
+  mutter: gnome-build-meta.bst:mutter
+  gnome-desktop: gnome-build-meta.bst:gnome-desktop
+  gsettings-desktop-schemas: gnome-build-meta.bst:gsettings-desktop-schemas
+  gvfs: gnome-build-meta.bst:gvfs
+  nautilus: gnome-build-meta.bst:nautilus
+
+  # Kernel
+  linux-fdsdk: core/linux-fdsdk.bst
+  linux-ogc: core/linux-ogc.bst

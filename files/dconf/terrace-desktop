@@ -1,0 +1,68 @@
+# dconf defaults for Plateau desktop
+
+[org/gnome/desktop/interface]
+gtk-theme='Adwaita-dark'
+icon-theme='Adwaita'
+cursor-theme='Adwaita'
+font-name='JetBrains Mono 10'
+monospace-font-name='JetBrains Mono 10'
+document-font-name='Sans 10'
+enable-animations=true
+cursor-blink=false
+cursor-blink-time=1200
+show-battery-percentage=true
+clock-format='24h'
+
+[org/gnome/desktop/wm/preferences]
+focus-mode='click'
+titlebar-font='JetBrains Mono Bold 10'
+button-layout='appmenu:minimize,maximize,close'
+action-double-click-titlebar='toggle-maximize'
+action-middle-click-titlebar='lower'
+action-right-click-titlebar='menu'
+
+[org/gnome/desktop/peripherals/keyboard]
+repeat=true
+repeat-interval=30
+delay=250
+numlock-state='on'
+remember-numlock-state=true
+
+[org/gnome/desktop/peripherals/mouse]
+accel-profile='flat'
+speed=0.0
+natural-scroll=false
+left-handed=false
+
+[org/gnome/desktop/peripherals/touchpad]
+tap-to-click=true
+tap-and-drag=true
+two-finger-scroll-enabled=true
+natural-scroll=false
+disable-while-typing=true
+
+[org/gnome/shell]
+favorite-apps=['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'org.gnome.TextEditor.desktop']
+disabled-extensions=[]
+enabled-extensions=[]
+
+[org/gnome/shell/extensions/dash-to-dock]
+dock-position='BOTTOM'
+extend-height=false
+dock-fixed=false
+intellihide=false
+autohide=false
+show-delay=0
+hide-delay=0
+animation-time=0.2
+running-indicator-style='DOTS'
+show-favorites=true
+show-trash=true
+show-mounts=true
+show-applications=true
+transparency-mode='FIXED'
+background-opacity=0.8
+custom-theme-shrink=true
+custom-theme-customize-running-dots=true
+running-dot-color='#ffffff'
+running-dot-size=8

@@ -1,0 +1,12 @@
+{
+  "plateau": {
+    "description": "Terrace desktop image with Mango WM and Quickshell",
+    "variants": ["default", "gaming"],
+    "architectures": ["x86_64", "x86_64_v3"]
+  },
+  "strata": {
+    "description": "Terrace server image with k0s and Kubestellar",
+    "variants": ["default"],
+    "architectures": ["x86_64", "x86_64_v3"]
+  }
+}

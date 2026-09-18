@@ -1,0 +1,25 @@
+[changelog]
+header = "# Terrace Changelog"
+body = """
+{% for version, commits in commits | group_by(attribute="version") %}
+## {{ version.timestamp | date(format="%Y-%m-%d") }} - {{ version }}
+{% for commit in commits %}
+- {{ commit.message }} ({{ commit.id | truncate(length=7) }})
+{% endfor %}
+{% endfor %}
+"""
+footer = ""
+
+[git]
+conventional_commits = true
+ignore_commits = []
+include_regex = ".*"
+exclude_regex = ""
+
+[template]
+commit = "- {{ message }} ({{ id | truncate(length=7) }})"
+commit_body = """
+{% if body %}
+{{ body }}
+{% endif %}
+"""

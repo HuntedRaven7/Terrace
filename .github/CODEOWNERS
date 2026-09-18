@@ -1,0 +1,26 @@
+# CODEOWNERS for Terrace
+
+# Global owners
+* @huntedraven7
+
+# BuildStream elements
+/elements/ @huntedraven7
+
+# CI/CD
+/.github/workflows/ @huntedraven7
+/.github/scripts/ @huntedraven7
+
+# Documentation
+/docs/ @huntedraven7
+
+# Agent skills
+/.agents/skills/ @huntedraven7
+
+# Scripts
+/scripts/ @huntedraven7
+/files/scripts/ @huntedraven7
+
+# Configuration
+/project.conf @huntedraven7
+/Justfile @huntedraven7
+/Containerfile @huntedraven7

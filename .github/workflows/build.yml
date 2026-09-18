@@ -1,0 +1,154 @@
+name: Build
+
+on:
+  push:
+    branches: [main, testing]
+  pull_request:
+    branches: [main, testing]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image to build (plateau, strata, all)'
+        required: false
+        default: 'all'
+        type: choice
+        options: [all, plateau, strata]
+      variant:
+        description: 'Variant to build (default, gaming)'
+        required: false
+        default: 'default'
+        type: choice
+        options: [default, gaming]
+      arch:
+        description: 'Architecture to build'
+        required: false
+        default: 'x86_64'
+        type: choice
+        options: [x86_64, x86_64_v3]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_ORG: huntedraven7
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: detect
+        uses: projectbluefin/actions/bootc-build/detect-changes@v1
+        with:
+          image-variants: .github/image-variants.json
+
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          echo "matrix=${{ steps.detect.outputs.matrix }}" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build ${{ matrix.image }}-${{ matrix.variant }}-${{ matrix.arch }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.matrix != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup runner
+        uses: projectbluefin/actions/bootc-build/setup-runner@v1
+        with:
+          install-tools: '["just", "cosign", "oras", "skopeo"]'
+
+      - name: Restore DNF cache
+        uses: projectbluefin/actions/bootc-build/dnf-cache@v1
+        with:
+          action: restore
+          cache-name: terrace-${{ matrix.image }}-${{ matrix.arch }}-${{ matrix.variant }}
+
+      - name: Build image
+        run: |
+          just bst build elements/${{ matrix.image }}/${{ matrix.image }}.bst \
+            --option arch ${{ matrix.arch }} \
+            --option gaming ${{ matrix.variant == 'gaming' && 'true' || 'false' }} \
+            --option x86_64_v3 ${{ matrix.arch == 'x86_64_v3' && 'true' || 'false' }}
+
+      - name: Save DNF cache
+        uses: projectbluefin/actions/bootc-build/dnf-cache@v1
+        with:
+          action: save
+          cache-name: terrace-${{ matrix.image }}-${{ matrix.arch }}-${{ matrix.variant }}
+
+      - name: Generate tags
+        id: tags
+        uses: projectbluefin/actions/bootc-build/generate-tags@v1
+        with:
+          image: ${{ matrix.image }}
+          stream: ${{ github.ref_name == 'main' && 'stable' || 'testing' }}
+          version: 26.08.1
+
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        uses: projectbluefin/actions/bootc-build/push-image@v1
+        with:
+          image: ${{ steps.tags.outputs.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest
+        if: github.event_name != 'pull_request'
+        uses: projectbluefin/actions/bootc-build/create-manifest@v1
+        with:
+          image: ${{ steps.tags.outputs.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+
+      - name: Sign and publish
+        if: github.event_name != 'pull_request' && github.ref_name == 'main'
+        uses: projectbluefin/actions/bootc-build/sign-and-publish@v1
+        with:
+          image: ${{ steps.tags.outputs.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+          cosign-password: ${{ secrets.COSIGN_PASSWORD }}
+          cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      - name: Chunkah rechunking
+        if: github.event_name != 'pull_request'
+        uses: projectbluefin/actions/bootc-build/chunka@v1
+        with:
+          image: ${{ steps.tags.outputs.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+
+      - name: Scan image
+        if: github.event_name != 'pull_request'
+        uses: projectbluefin/actions/bootc-build/scan-image@v1
+        with:
+          image: ${{ steps.tags.outputs.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+          severity: HIGH,CRITICAL
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.image }}-${{ matrix.arch }}-${{ matrix.variant }}
+          path: |
+            dist/
+          retention-days: 7

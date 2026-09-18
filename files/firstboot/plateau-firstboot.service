@@ -1,0 +1,13 @@
+[Unit]
+Description=Plateau Firstboot Setup
+Documentation=https://github.com/huntedraven7/terrace
+After=graphical.target
+ConditionPathExists=!/var/lib/terrace/firstboot-complete
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/plateau-firstboot.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,26 @@
+# actionlint configuration for Terrace
+
+# Shellcheck for inline scripts
+shellcheck: ""
+
+# Allowed patterns for third-party actions (pinned to SHA)
+allowed-patterns:
+  - uses: "actions/checkout@v4"
+  - uses: "actions/setup-python@v5"
+  - uses: "actions/cache@v4"
+  - uses: "actions/upload-artifact@v4"
+  - uses: "actions/download-artifact@v4"
+  - uses: "softprops/action-gh-release@v2"
+  - uses: "projectbluefin/actions/"
+
+# Deny mutable refs for third-party actions
+deny-mutable-refs: true
+
+# Require timeout for jobs
+require-timeout: true
+
+# Require permissions for jobs
+require-permissions: true
+
+# Skip checks for specific files (if needed)
+skip-files: []

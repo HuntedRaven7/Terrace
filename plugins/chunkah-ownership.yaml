@@ -1,0 +1,30 @@
+# Chunkah Ownership Plugin Configuration
+#
+# This plugin records public staging results while preserving BuildStream
+# compose filtering and integration semantics.
+
+name: chunkah-ownership
+kind: plugin
+api-version: 2
+
+# Plugin entry point
+script: chunkah-ownership.py
+
+# Configuration options
+config:
+  # Directory to store ownership metadata
+  ownership_dir:
+    type: str
+    description: Directory to store ownership metadata
+    default: "/var/cache/chunkah/ownership"
+
+# Element types this plugin applies to
+element-types:
+- compose
+- stack
+- manual
+
+# Commands this plugin provides
+commands:
+- record-ownership
+- get-ownership

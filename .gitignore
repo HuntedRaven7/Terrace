@@ -1,0 +1,61 @@
+# Build artifacts
+dist/
+build/
+*.raw
+*.raw.zst
+*.efi
+*.cpio.gz
+SHA256SUMS
+
+# Kilo AI
+.kilo/
+
+# BuildStream cache
+.cache/buildstream/
+~/.cache/buildstream/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+.coverage
+coverage.xml
+*.sarif
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Secrets (never commit)
+*.key
+*.pem
+*.crt
+secrets/
+.env.local
+
+# Editor
+*.orig
+*.rej

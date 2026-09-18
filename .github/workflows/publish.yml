@@ -1,0 +1,111 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image to publish (plateau, strata, all)'
+        required: true
+        default: 'all'
+        type: choice
+        options: [all, plateau, strata]
+      stream:
+        description: 'Stream to publish (testing, stable)'
+        required: true
+        default: 'testing'
+        type: choice
+        options: [testing, stable]
+      version:
+        description: 'Version to publish'
+        required: true
+        default: '26.08.1'
+
+jobs:
+  publish:
+    name: Publish ${{ github.event.inputs.image }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        image: [plateau, strata]
+        arch: [x86_64, x86_64_v3]
+        variant: [default, gaming]
+        include:
+          - image: plateau
+            variant: default
+          - image: plateau
+            variant: gaming
+          - image: strata
+            variant: default
+        exclude:
+          - image: strata
+            variant: gaming
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup runner
+        uses: projectbluefin/actions/bootc-build/setup-runner@v1
+        with:
+          install-tools: '["just", "cosign", "oras", "skopeo"]'
+
+      - name: Generate tags
+        id: tags
+        uses: projectbluefin/actions/bootc-build/generate-tags@v1
+        with:
+          image: ${{ matrix.image }}
+          stream: ${{ github.event.inputs.stream }}
+          version: ${{ github.event.inputs.version }}
+
+      - name: Pull image
+        run: |
+          for tag in ${{ steps.tags.outputs.tags }}; do
+            podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_ORG }}/terrace/${{ matrix.image }}:${tag} || true
+          done
+
+      - name: Push image
+        uses: projectbluefin/actions/bootc-build/push-image@v1
+        with:
+          image: ${{ matrix.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest
+        uses: projectbluefin/actions/bootc-build/create-manifest@v1
+        with:
+          image: ${{ matrix.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+
+      - name: Sign and publish
+        if: github.event.inputs.stream == 'stable'
+        uses: projectbluefin/actions/bootc-build/sign-and-publish@v1
+        with:
+          image: ${{ matrix.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+          cosign-password: ${{ secrets.COSIGN_PASSWORD }}
+          cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      - name: Chunkah rechunking
+        uses: projectbluefin/actions/bootc-build/chunka@v1
+        with:
+          image: ${{ matrix.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+
+      - name: Scan image
+        uses: projectbluefin/actions/bootc-build/scan-image@v1
+        with:
+          image: ${{ matrix.image }}
+          tags: ${{ steps.tags.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+          severity: HIGH,CRITICAL
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_ORG: huntedraven7

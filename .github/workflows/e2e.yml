@@ -1,0 +1,64 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image to test (plateau, strata, all)'
+        required: false
+        default: 'all'
+        type: choice
+        options: [all, plateau, strata]
+      arch:
+        description: 'Architecture to test'
+        required: false
+        default: 'x86_64'
+        type: choice
+        options: [x86_64, x86_64_v3]
+
+jobs:
+  test:
+    name: E2E Test ${{ matrix.image }}-${{ matrix.arch }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [plateau, strata]
+        arch: [x86_64, x86_64_v3]
+        include:
+          - image: plateau
+            arch: x86_64
+          - image: plateau
+            arch: x86_64_v3
+          - image: strata
+            arch: x86_64
+          - image: strata
+            arch: x86_64_v3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup runner
+        uses: projectbluefin/actions/bootc-build/setup-runner@v1
+        with:
+          install-tools: '["just", "qemu-system-x86_64", "ovmf"]'
+
+      - name: Pull image
+        run: |
+          TAG="testing-26.08.1-${{ matrix.arch }}-default"
+          podman pull ghcr.io/huntedraven7/terrace/${{ matrix.image }}:${TAG}
+
+      - name: Run QEMU smoke test
+        run: |
+          just show-me-the-future-${{ matrix.image }}
+
+      - name: Run desktop tests (Plateau only)
+        if: matrix.image == 'plateau'
+        run: |
+          python3 scripts/test_desktop_defaults.py
+
+      - name: Run server tests (Strata only)
+        if: matrix.image == 'strata'
+        run: |
+          python3 scripts/test_server_defaults.py

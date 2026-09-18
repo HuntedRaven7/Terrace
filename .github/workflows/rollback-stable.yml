@@ -1,0 +1,88 @@
+name: Rollback Stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to rollback to'
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback to ${{ github.event.inputs.version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup runner
+        uses: projectbluefin/actions/bootc-build/setup-runner@v1
+        with:
+          install-tools: '["skopeo", "cosign"]'
+
+      - name: Rollback stable tags
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          for image in plateau strata; do
+            for arch in x86_64 x86_64_v3; do
+              for variant in default gaming; do
+                if [ "$image" = "strata" ] && [ "$variant" = "gaming" ]; then
+                  continue
+                fi
+                STABLE_TAG="stable-${VERSION}-${arch}-${variant}"
+                PREVIOUS_STABLE="stable-${VERSION}-${arch}-${variant}"
+
+                # Re-tag previous stable as current stable
+                skopeo copy --all \
+                  docker://ghcr.io/huntedraven7/terrace/${image}:${PREVIOUS_STABLE} \
+                  docker://ghcr.io/huntedraven7/terrace/${image}:${STABLE_TAG}
+              done
+            done
+          done
+
+      - name: Sign rolled back images
+        uses: projectbluefin/actions/bootc-build/sign-and-publish@v1
+        with:
+          image: all
+          tags: stable-${{ github.event.inputs.version }}
+          registry: ghcr.io
+          cosign-password: ${{ secrets.COSIGN_PASSWORD }}
+          cosign-private-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      - name: Update release state
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          cat > .github/release-state.yaml << EOF
+current:
+  version: "${VERSION}"
+  plateau:
+    testing: "${VERSION}"
+    stable: "${VERSION}"
+  strata:
+    testing: "${VERSION}"
+    stable: "${VERSION}"
+
+history:
+  - version: "${VERSION}"
+    date: "${DATE}"
+    promoted_by: "github-actions"
+    rolled_back: true
+
+promotion:
+  schedule: "friday"
+  last_promotion: "${DATE}"
+  next_promotion: "$(date -u -d '+7 days' +%Y-%m-%dT%H:%M:%SZ)"
+EOF
+
+      - name: Commit release state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/release-state.yaml
+          git commit -m "ci: rollback to ${VERSION} [skip ci]" || true
+          git push || true

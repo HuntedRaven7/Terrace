@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Terrace
+Description=Terrace Plymouth Theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/terrace
+ScriptFile=/usr/share/plymouth/themes/terrace/terrace.script
