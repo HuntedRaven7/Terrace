@@ -3,5 +3,18 @@ kind: junction
 sources:
 - kind: git_repo
   url: gitlab:gnome/gnome-build-meta.git
-  track: 26.08*
-  ref: gnome-build-meta-26.08.1-0-g3f7b8c7c5b1e2a8f9c5e4d3a2b1c0d9e8f7a6b5
+  track: gnome-51
+  ref: 51.0-1-g66496574a8103a5106d79e2759287ac3835a1757
+
+config:
+  options:
+    arch: '%{arch}'
+  (?):
+    - x86_64_v3:
+      x86_64_v3: true
+
+overrides:
+  freedesktop-sdk.bst: freedesktop-sdk.bst
+  core/meta-gnome-core-apps.bst: core/meta-gnome-core-apps.bst
+  plugins/buildstream-plugins.bst: plugins/buildstream-plugins.bst
+  plugins/buildstream-plugins-community.bst: plugins/buildstream-plugins-community.bst
